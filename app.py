@@ -2,104 +2,152 @@ import streamlit as st
 from groq import Groq
 
 # 1. Настройка страницы
-st.set_page_config(page_title="AI Pro Studio", layout="wide", page_icon="🧬")
+st.set_page_config(page_title="Kimi Live", layout="wide", page_icon="🔵")
 
-# 2. Визуальный стиль (Исправленный и Улучшенный)
-st.markdown("""
+# 2. Боковая панель
+with st.sidebar:
+    st.title("⚙️ Настройки")
+    api_key = st.text_input("Вставь Groq API Key:", type="password")
+    
+    st.divider()
+    st.subheader("🎨 Твой стиль")
+    bg_color = st.color_picker("Цвет фона", "#0A0A0A")
+    accent_color = st.color_picker("Цвет блоков", "#1A1A1A")
+    text_color = st.color_picker("Цвет текста", "#E5E5E5")
+    
+    st.divider()
+    voice_on = st.toggle("Включить голос", value=True)
+    if st.button("Сбросить к стилю Kimi"):
+        st.rerun() # Кнопка для возврата к дефолту
+
+# 3. Дизайн с АНИМИРОВАННЫМ ассистентом
+st.markdown(f"""
     <style>
     @import url('https://googleapis.com');
 
-    .stApp {
-        background-color: #161621;
-        color: #E0E0E0;
-        font-family: 'Poppins', sans-serif;
-    }
+    .stApp {{ background-color: {bg_color}; color: {text_color}; font-family: 'Inter', sans-serif; }}
 
-    [data-testid="stSidebar"] {
-        background-color: #1F1D2B !important;
-        border-right: 1px solid #2D2D44;
-    }
+    /* --- АНИМАЦИЯ АССИСТЕНТА --- */
+    @keyframes float {{
+        0% {{ transform: translateY(0px) rotate(0deg); }}
+        50% {{ transform: translateY(-10px) rotate(2deg); }}
+        100% {{ transform: translateY(0px) rotate(0deg); }}
+    }}
+    
+    @keyframes breathe {{
+        0% {{ box-shadow: 0 0 15px rgba(91, 153, 255, 0.4); transform: scale(1); }}
+        50% {{ box-shadow: 0 0 25px rgba(91, 153, 255, 0.7); transform: scale(1.05); }}
+        100% {{ box-shadow: 0 0 15px rgba(91, 153, 255, 0.4); transform: scale(1); }}
+    }}
 
-    [data-testid="stChatMessage"] {
-        background-color: #1F1D2B !important;
-        border-radius: 28px !important;
-        border: 1px solid #2D2D44 !important;
-        padding: 25px !important;
-        margin-bottom: 20px !important;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-    }
+    .kimi-container {{
+        display: flex;
+        justify-content: flex-start;
+        padding-top: 20px;
+        margin-bottom: 30px;
+    }}
 
-    .stButton>button {
-        background: linear-gradient(135deg, #8A2BE2 0%, #FF007F 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 18px !important;
-        padding: 14px 28px !important;
-        font-weight: 600 !important;
-        width: 100%;
-        transition: all 0.4s ease;
-    }
+    .kimi-avatar {{
+        width: 50px;
+        height: 50px;
+        background: radial-gradient(circle at 30% 30%, #5B99FF, #2E5BFF);
+        border-radius: 50%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: float 4s ease-in-out infinite; /* Качается вверх-вниз */
+    }}
 
-    .stChatInputContainer input {
-        background-color: #2D2D44 !important;
-        border: 1px solid #3F3F5F !important;
-        border-radius: 20px !important;
-        color: white !important;
-    }
+    .kimi-avatar::before {{
+        content: '';
+        position: absolute;
+        width: 100%; height: 100%;
+        border-radius: 50%;
+        animation: breathe 3s infinite; /* Эффект пульсации/дыхания */
+    }}
 
-    h1 {
-        background: linear-gradient(to right, #FF007F, #FF8C00);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center;
-    }
+    .kimi-eyes {{
+        color: white;
+        font-weight: bold;
+        font-size: 22px;
+        letter-spacing: 2px;
+        z-index: 2;
+        user-select: none;
+    }}
 
-    img { border-radius: 25px; border: 1px solid #2D2D44; }
-    header, footer {visibility: hidden;}
+    /* --- ОСТАЛЬНОЙ ДИЗАЙН --- */
+    [data-testid="stChatMessage"] {{ background-color: transparent !important; color: {text_color} !important; }}
+    .suggestion-chip {{
+        background-color: {accent_color};
+        border: 1px solid {text_color}22;
+        border-radius: 12px;
+        padding: 10px 15px;
+        margin: 5px;
+        font-size: 14px;
+        color: {text_color}bb;
+        display: inline-block;
+        transition: 0.3s;
+    }}
+    .suggestion-chip:hover {{ border-color: #5B99FF; color: white; }}
+
+    .stChatInputContainer input {{
+        background-color: {accent_color} !important;
+        border: 1px solid {text_color}22 !important;
+        border-radius: 24px !important;
+        color: {text_color} !important;
+    }}
+
+    header, footer {{visibility: hidden;}}
     </style>
+
+    <div class="kimi-container">
+        <div class="kimi-avatar">
+            <div class="kimi-eyes">••</div>
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
-# 3. Функционал
-with st.sidebar:
-    st.markdown("### 🎛️ ПАНЕЛЬ УПРАВЛЕНИЯ")
-    api_key = st.text_input("ВВОД КЛЮЧА:", type="password")
-    st.divider()
-    character = st.selectbox("СТИЛЬ УЧИТЕЛЯ:", ["Дружелюбный ИИ", "Кибер-Наставник", "Профессор"])
-    voice_type = st.radio("ГОЛОС:", ["Женский", "Мужской"])
+# 4. Интерфейс
+st.markdown(f"### Привет! Я твой живой ИИ-репетитор. \nНа какую тему создадим сегодня конспект?")
 
-def speak(text, voice):
-    p = "1.2" if voice == "Женский" else "0.8"
-    c_t = text.replace("'", "").replace('"', '').replace("\n", " ").replace("*", "")
-    js = f"<script>var m=new SpeechSynthesisUtterance('{c_t}');m.lang='ru-RU';m.pitch={p};window.speechSynthesis.speak(m);</script>"
-    st.components.v1.html(js, height=0)
-
-st.title("SMART LESSON STUDIO")
+st.markdown(f"""
+    <div class="suggestion-chip">Как устроена нейросеть?</div>
+    <div class="suggestion-chip">Объясни квантовую физику</div>
+    <div class="suggestion-chip">Напиши план тренировок</div>
+""", unsafe_allow_html=True)
 
 if api_key:
     try:
         client = Groq(api_key=api_key)
-        query = st.chat_input("Введите тему для урока...")
+        query = st.chat_input("Напиши мне что-нибудь...")
 
         if query:
-            with st.spinner("🧬 СИНТЕЗ ЗНАНИЙ..."):
+            with st.spinner(""):
                 chat = client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": f"Ты — эксперт. Стиль: {character}."},
-                        {"role": "user", "content": query}
-                    ],
+                    messages=[{"role": "user", "content": query}],
                     model="llama-3.3-70b-versatile"
                 )
-                res = chat.choices[0].message.content
+                response = chat.choices.message.content
                 
                 with st.chat_message("assistant"):
-                    st.markdown(res)
+                    st.markdown(response)
                 
-                img_url = f"https://pollinations.ai{query.replace(' ','-')}?width=1024&height=768&nologo=true"
+                img_url = f"https://pollinations.ai{query.replace(' ','-')}?width=1024&height=576&nologo=true"
                 st.image(img_url)
-                
-                speak(res, voice_type)
-                st.download_button("💾 СКАЧАТЬ ЛОГ", res, file_name="lesson.txt")
+
+                if voice_on:
+                    js_speak = f"<script>var m=new SpeechSynthesisUtterance('{response.replace(chr(39), '').replace(chr(34), '').replace(chr(10), ' ')}');m.lang='ru-RU';window.speechSynthesis.speak(m);</script>"
+                    st.components.v1.html(js_speak, height=0)
     except Exception as e:
-        st.error(f"ОШИБКА: {e}")
+        st.error(f"Ошибка системы: {e}")
 else:
-    st.info("💎 АКТИВИРУЙТЕ СИСТЕМУ КЛЮЧОМ В МЕНЮ СЛЕВА.")
+    st.info("👋 Активируй меня ключом в меню слева!")
+
+# Декор (Pills)
+st.markdown(f"""
+<div style="margin-top: 30px;">
+    <span style="background:{accent_color}; padding:8px 16px; border-radius:20px; font-size:12px; border:1px solid {text_color}11; margin-right:10px;">🤖 Agent</span>
+    <span style="background:{accent_color}; padding:8px 16px; border-radius:20px; font-size:12px; border:1px solid {text_color}11;">📊 Slides</span>
+</div>
+""", unsafe_allow_html=True)
