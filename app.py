@@ -2,125 +2,119 @@ import streamlit as st
 from groq import Groq
 
 # 1. Настройка страницы
-st.set_page_config(page_title="AI Gamer Tutor", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="AI Pro Studio", layout="wide", page_icon="🧬")
 
-# 2. Боковая панель с палитрой
-with st.sidebar:
-    st.title("🕹️ Настройки UI")
-    
-    # ВЫБОР ЦВЕТОВ
-    bg_color = st.color_picker("Цвет фона", "#000000")
-    text_color = st.color_picker("Цвет текста и подсветки", "#ff5f00")
-    
-    st.divider()
-    api_key = st.text_input("🔑 Вставь API Key:", type="password")
-    character = st.selectbox("Твой Наставник:", ["Кибер-Мастер", "Друг-Геймер", "ИИ-Ассистент"])
-    voice_type = st.radio("Голос:", ["Женский", "Мужской"])
-
-# 3. Геймерский дизайн с динамическими цветами
-st.markdown(f"""
+# 2. Визуальный стиль "Deep Purple UI"
+st.markdown("""
     <style>
-    /* Главный фон */
-    .stApp {{
-        background: {bg_color};
-        color: {text_color};
-        font-family: 'Segoe UI', sans-serif;
-    }}
-    
+    @import url('https://googleapis.com');
+
+    /* Основной фон приложения */
+    .stApp {
+        background-color: #161621;
+        color: #E0E0E0;
+        font-family: 'Poppins', sans-serif;
+    }
+
     /* Боковая панель */
-    [data-testid="stSidebar"] {{
-        background-color: {bg_color} !important;
-        border-right: 1px solid {text_color}44;
-    }}
+    [data-testid="stSidebar"] {
+        background-color: #1F1D2B !important;
+        border-right: 1px solid #2D2D44;
+    }
 
-    /* Стеклянные карточки сообщений */
-    [data-testid="stChatMessage"] {{
-        background: rgba(28, 28, 30, 0.6);
-        border: 1px solid {text_color}66;
-        border-radius: 24px;
-        color: {text_color} !important;
-        backdrop-filter: blur(15px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }}
+    /* Карточки уроков с эффектом глубины */
+    [data-testid="stChatMessage"] {
+        background-color: #1F1D2B !important;
+        border-radius: 28px !important;
+        border: 1px solid #2D2D44 !important;
+        padding: 25px !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
 
-    /* Кнопки с динамическим цветом */
-    .stButton>button {{
-        border-radius: 16px;
-        border: 2px solid {text_color};
-        background: transparent;
-        color: {text_color};
-        font-weight: 700;
-        transition: all 0.3s ease;
+    /* Кнопка с ярким градиентом как на референсе */
+    .stButton>button {
+        background: linear-gradient(135deg, #8A2BE2 0%, #FF007F 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 18px !important;
+        padding: 14px 28px !important;
+        font-weight: 600 !important;
+        width: 100%;
+        transition: all 0.4s ease;
         text-transform: uppercase;
-    }}
-    .stButton>button:hover {{
-        background: {text_color};
-        color: {bg_color};
-        box-shadow: 0 0 20px {text_color}66;
-    }}
+        letter-spacing: 1px;
+        box-shadow: 0 5px 15px rgba(138, 43, 226, 0.3);
+    }
+    .stButton>button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 25px rgba(255, 0, 127, 0.5);
+    }
 
-    /* Заголовки */
-    h1 {{
-        color: {text_color};
-        text-shadow: 0 0 15px {text_color}66;
-        font-size: 3rem !important;
-        font-weight: 900 !important;
+    /* Поле ввода - современный темный стиль */
+    .stChatInputContainer input {
+        background-color: #2D2D44 !important;
+        border: 1px solid #3F3F5F !important;
+        border-radius: 20px !important;
+        color: white !important;
+        padding: 15px !important;
+    }
+
+    /* Заголовки с неоновым оттенком */
+    h1 {
+        font-weight: 600 !important;
+        background: linear-gradient(to right, #FF007F, #FF8C00);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         text-align: center;
-    }}
+        margin-bottom: 40px !important;
+    }
 
-    /* Поля ввода */
-    .stChatInputContainer input {{
-        background-color: rgba(28, 28, 30, 0.9) !important;
-        border: 1px solid {text_color}44 !important;
-        color: {text_color} !important;
-    }}
+    /* Кастомная полоска прогресса (имитация под референс) */
+    .stProgress > div > div > div > div {
+        background-image: linear-gradient(to right, #8A2BE2, #FF007F) !important;
+    }
 
-    /* Текст в выпадающих списках и метках */
-    label, p, .stSelectbox {{
-        color: {text_color} !important;
-    }}
-    
-    img {{
-        border-radius: 24px;
-        border: 1px solid {text_color}44;
-    }}
+    /* Изображения с мягким свечением */
+    img {
+        border-radius: 25px;
+        border: 1px solid #2D2D44;
+        box-shadow: 0 0 20px rgba(138, 43, 226, 0.2);
+    }
+
+    /* Скрываем стандартные элементы */
+    header, footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# 4. Логика приложения
-def speak(text_to_say, voice):
-    pitch = "1.2" if voice == "Женский" else "0.8"
-    clean_text = text_to_say.replace("'", "").replace('"', '').replace("\n", " ").replace("*", "")
-    js = f"<script>var m=new SpeechSynthesisUtterance('{clean_text}');m.lang='ru-RU';m.pitch={pitch};window.speechSynthesis.speak(m);</script>"
+# 3. Функциональная часть
+with st.sidebar:
+    st.markdown("### 🎛️ ПАНЕЛЬ УПРАВЛЕНИЯ")
+    api_key = st.text_input("ВВОД КЛЮЧА:", type="password")
+    
+    st.divider()
+    character = st.selectbox("СТИЛЬ УЧИТЕЛЯ:", ["Дружелюбный ИИ", "Кибер-Наставник", "Профессор"])
+    voice_type = st.radio("ГОЛОС:", ["Женский", "Мужской"])
+    
+    st.markdown("---")
+    st.markdown("🎯 Ваш прогресс обучения:")
+    st.progress(65) # Статичный пример прогресса для красоты
+
+def speak(text, voice):
+    p = "1.2" if voice == "Женский" else "0.8"
+    c_t = text.replace("'", "").replace('"', '').replace("\n", " ").replace("*", "")
+    js = f"<script>var m=new SpeechSynthesisUtterance('{c_t}');m.lang='ru-RU';m.pitch={p};window.speechSynthesis.speak(m);</script>"
     st.components.v1.html(js, height=0)
 
-st.title("BRAIN LEVEL UP")
+st.title("SMART LESSON STUDIO")
 
 if api_key:
     try:
         client = Groq(api_key=api_key)
-        query = st.chat_input("Введи тему для изучения...")
+        query = st.chat_input("Введите тему для мгновенного урока...")
 
         if query:
-            with st.spinner("💾 Синхронизация данных..."):
-                chat_completion = client.chat.completions.create(
+            with st.spinner("🧬 СИНТЕЗ ЗНАНИЙ..."):
+                chat = client.chat.completions.create(
                     messages=[
-                        {"role": "system", "content": f"Ты — крутой учитель в стиле {character}. Объясни тему кратко, четко, используя геймерские аналогии."},
-                        {"role": "user", "content": query}
-                    ],
-                    model="llama-3.3-70b-versatile",
-                )
-                response = chat_completion.choices.message.content
-                
-                with st.chat_message("assistant"):
-                    st.markdown(response)
-                
-                img_url = f"https://pollinations.ai{query.replace(' ','%20')}?width=1080&height=720&nologo=true"
-                st.image(img_url)
-                
-                speak(response, voice_type)
-                st.download_button("📥 Сохранить лог", response, file_name="lesson.txt")
-    except Exception as e:
-        st.error(f"Критическая ошибка: {e}")
-else:
-    st.info("👾 Подключи API Key в боковой панели, чтобы активировать систему.")
+                        {"role": "system", "content": f"Ты — эксперт. Стиль: {character}. Объясни тему {query} кратко и с картинками."},
