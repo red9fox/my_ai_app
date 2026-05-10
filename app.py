@@ -1,83 +1,66 @@
 import streamlit as st
 from groq import Groq
-import requests
+import PyPDF2 # Теперь это будет работать
 
-# 1. Настройка страницы
-st.set_page_config(page_title="Ghost Media Tutor", layout="wide", page_icon="🎬")
+st.set_page_config(page_title="Ghost AI Studio", layout="wide", page_icon="🎓")
 
-# Инициализация памяти
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# 2. Боковая панель (Загрузка файлов здесь!)
+# 1. Боковая панель для загрузки
 with st.sidebar:
     st.title("📁 Загрузка данных")
     uploaded_file = st.file_uploader("Загрузи документ (PDF, TXT)", type=["pdf", "txt"])
     api_key = st.text_input("Groq API Key:", type="password")
-    
     st.divider()
-    st.subheader("🎨 Настройки вывода")
-    gen_image = st.checkbox("Генерировать фото к уроку", value=True)
+    gen_image = st.checkbox("Генерировать фото", value=True)
     voice_on = st.toggle("Озвучка", value=True)
 
-# 3. Дизайн в стиле Kimi
-st.markdown("""
-    <style>
-    .stApp { background-color: #0A0A0A; color: #E5E5E5; }
-    [data-testid="stChatInput"] { border-radius: 30px !important; background-color: #1A1A1A !important; }
-    .stImage > img { border-radius: 20px; border: 1px solid #262626; }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. Дизайн Kimi
+st.markdown("""<style>.stApp { background-color: #0A0A0A; color: #E5E5E5; }</style>""", unsafe_allow_html=True)
+st.title("🎓 Ghost AI: Умный Репетитор")
 
-st.title("🎬 Ghost AI: Резюме и Медиа")
+# 3. Функция чтения PDF
+def read_pdf(file):
+    pdf_reader = PyPDF2.PdfReader(file)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+    return text
 
-# 4. Обработка загруженного файла
-file_context = ""
-if uploaded_file is not None:
-    if uploaded_file.type == "text/plain":
-        file_context = str(uploaded_file.read(), "utf-8")
+# 4. Обработка файла
+context = ""
+if uploaded_file:
+    if uploaded_file.type == "application/pdf":
+        context = read_pdf(uploaded_file)
     else:
-        file_context = "Тут должен быть текст из PDF (нужна библиотека PyPDF2)"
-    st.success("Документ загружен! Теперь я могу сделать по нему резюме.")
+        context = str(uploaded_file.read(), "utf-8")
+    st.success("Документ прочитан! Можешь задавать вопросы по нему.")
 
 # 5. Логика чата
 if api_key:
     client = Groq(api_key=api_key)
-    
-    if prompt := st.chat_input("Напиши тему или нажми 'Сделай резюме файла'"):
-        # Если есть файл, добавляем его в контекст
-        user_input = prompt
-        if file_context:
-            user_input = f"Используй этот текст для ответа: {file_context[:2000]}. Запрос: {prompt}"
+    query = st.chat_input("Напиши тему или 'Сделай резюме файла'...")
 
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        with st.chat_message("user"):
-            st.write(prompt)
-
-        with st.chat_message("assistant"):
-            # Запрос к ИИ
+    if query:
+        with st.spinner("Думаю..."):
+            # Формируем запрос с учетом файла
+            full_prompt = f"Контекст из файла: {context[:3000]}\n\nЗапрос: {query}" if context else query
+            
             chat = client.chat.completions.create(
-                messages=[{"role": "system", "content": "Ты эксперт по резюме. Делай структурированные ответы. Если просят презентацию - пиши по пунктам."}] + st.session_state.messages,
+                messages=[{"role": "user", "content": full_prompt}],
                 model="llama-3.3-70b-versatile"
             )
-            response = chat.choices.message.content
-            st.markdown(response)
             
-            # --- ГЕНЕРАЦИЯ ФОТО ---
+            # ИСПРАВЛЕННАЯ СТРОЧКА (добавили индекс [0])
+            response = chat.choices[0].message.content
+            
+            with st.chat_message("assistant"):
+                st.write(response)
+            
             if gen_image:
-                st.subheader("🖼️ Визуализация:")
-                img_url = f"https://pollinations.ai{prompt.replace(' ','-')}?width=1024&height=512&nologo=true"
+                img_url = f"https://pollinations.ai{query.replace(' ','-')}?width=800&height=400&nologo=true"
                 st.image(img_url)
 
-            # --- ИМИТАЦИЯ ВИДЕО ---
-            # На бесплатном уровне видео делать сложно, но мы можем дать ссылку на генератор
-            st.info("🎥 Для создания видео из этого текста используй бесплатный сервис: [Luma Dream Machine](https://lumalabs.ai)")
-
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            
             if voice_on:
-                st.components.v1.html(f"<script>window.speechSynthesis.speak(new SpeechSynthesisUtterance('{response[:500].replace(chr(10), ' ')}'));</script>", height=0)
-
+                js = f"<script>window.speechSynthesis.speak(new SpeechSynthesisUtterance('{response[:500].replace(chr(10), ' ')}'));</script>"
+                st.components.v1.html(js, height=0)
 else:
-    st.info("🔑 Вставь ключ API, чтобы активировать медиа-функции.")
+    st.info("Вставь API Key слева!")
