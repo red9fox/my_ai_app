@@ -1,126 +1,83 @@
 import streamlit as st
 from groq import Groq
+import requests
 
 # 1. Настройка страницы
-st.set_page_config(page_title="AI Tutor Studio", layout="wide", page_icon="🎓")
+st.set_page_config(page_title="Ghost Media Tutor", layout="wide", page_icon="🎬")
 
-# 2. Боковая панель
+# Инициализация памяти
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# 2. Боковая панель (Загрузка файлов здесь!)
 with st.sidebar:
-    st.title("⚙️ Настройки")
-    ai_name = st.text_input("Имя твоего ИИ-учителя:", "ghost")
+    st.title("📁 Загрузка данных")
+    uploaded_file = st.file_uploader("Загрузи документ (PDF, TXT)", type=["pdf", "txt"])
     api_key = st.text_input("Groq API Key:", type="password")
     
     st.divider()
-    level = st.select_slider("Уровень сложности:", options=["Детский", "Школьный", "Студент", "Профи"])
-    voice_on = st.toggle("Озвучка урока", value=True)
-    
-    st.divider()
-    bg_color = st.color_picker("Фон", "#0A0A0A")
-    accent_color = st.color_picker("Элементы", "#1A1A1A")
-    text_color = st.color_picker("Текст", "#FFFFFF")
+    st.subheader("🎨 Настройки вывода")
+    gen_image = st.checkbox("Генерировать фото к уроку", value=True)
+    voice_on = st.toggle("Озвучка", value=True)
 
-# 3. Дизайн и СТИЛИ КНОПОК
-st.markdown(f"""
+# 3. Дизайн в стиле Kimi
+st.markdown("""
     <style>
-    @import url('https://googleapis.com');
-    .stApp {{ background-color: {bg_color}; color: {text_color}; font-family: 'Inter', sans-serif; }}
-    .block-container {{ max-width: 800px; padding-top: 2rem; margin: 0 auto; }}
-
-    /* Анимированный аватар */
-    @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
-    .kimi-avatar {{
-        width: 50px; height: 50px; background: radial-gradient(circle at 30% 30%, #5B99FF, #2E5BFF);
-        border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        animation: float 4s ease-in-out infinite; margin: 0 auto 25px auto;
-    }}
-    .kimi-eyes {{ color: white; font-weight: bold; font-size: 22px; letter-spacing: 2px; }}
-
-    /* Скрываем стандартные кнопки Streamlit, чтобы сделать свои */
-    div.stButton > button {{
-        background-color: {accent_color} !important;
-        color: #A0A0A0 !important;
-        border: 1px solid {text_color}11 !important;
-        border-radius: 12px !important;
-        font-size: 13px !important;
-        padding: 8px 16px !important;
-        transition: 0.3s !important;
-    }}
-    div.stButton > button:hover {{
-        border-color: {text_color}44 !important;
-        color: {text_color} !important;
-    }}
-
-    /* Панель ввода */
-    [data-testid="stChatInput"] {{
-        position: fixed !important; bottom: 30px !important;
-        left: 50% !important; transform: translateX(-50%) !important;
-        width: 90% !important; max-width: 700px !important;
-        background-color: {accent_color} !important;
-        border: 1px solid {text_color}22 !important;
-        border-radius: 35px !important;
-    }}
-
-    header, footer {{visibility: hidden;}}
+    .stApp { background-color: #0A0A0A; color: #E5E5E5; }
+    [data-testid="stChatInput"] { border-radius: 30px !important; background-color: #1A1A1A !important; }
+    .stImage > img { border-radius: 20px; border: 1px solid #262626; }
     </style>
-    
-    <div class="kimi-avatar"><div class="kimi-eyes">••</div></div>
-    <h3 style="text-align: center; font-weight:400;">Привет! Я {ai_name}. Что изучим?</h3>
     """, unsafe_allow_html=True)
 
-# Инициализируем сессию для хранения команд
-if "mode_cmd" not in st.session_state:
-    st.session_state.mode_cmd = ""
+st.title("🎬 Ghost AI: Резюме и Медиа")
 
-# 4. РАБОЧИЕ КНОПКИ (Элементы управления)
-cols = st.columns([1,1,1,1])
-with cols[0]:
-    if st.button("🤖 Репетитор"):
-        st.session_state.mode_cmd = "Объясни как репетитор тему: "
-with cols[1]:
-    if st.button("📊 Слайды"):
-        st.session_state.mode_cmd = "Сделай краткий план-слайды по теме: "
-with cols[2]:
-    if st.button("🔍 Исследование"):
-        st.session_state.mode_cmd = "Проведи глубокое исследование темы: "
-with cols[3]:
-    if st.button("🪄 Тесты"):
-        st.session_state.mode_cmd = "Создай тест с вопросами по теме: "
+# 4. Обработка загруженного файла
+file_context = ""
+if uploaded_file is not None:
+    if uploaded_file.type == "text/plain":
+        file_context = str(uploaded_file.read(), "utf-8")
+    else:
+        file_context = "Тут должен быть текст из PDF (нужна библиотека PyPDF2)"
+    st.success("Документ загружен! Теперь я могу сделать по нему резюме.")
 
-# 5. Логика ИИ
+# 5. Логика чата
 if api_key:
-    try:
-        client = Groq(api_key=api_key)
-        
-        # Поле ввода (с подставленной командой, если нажата кнопка)
-        query = st.chat_input(f"Напиши тему для {ai_name}...")
+    client = Groq(api_key=api_key)
+    
+    if prompt := st.chat_input("Напиши тему или нажми 'Сделай резюме файла'"):
+        # Если есть файл, добавляем его в контекст
+        user_input = prompt
+        if file_context:
+            user_input = f"Используй этот текст для ответа: {file_context[:2000]}. Запрос: {prompt}"
 
-        # Если нажали кнопку или ввели текст
-        actual_query = query
-        if not query and st.session_state.mode_cmd:
-            st.warning(f"Режим выбран! Теперь просто впиши тему в поле ниже.")
+        st.session_state.messages.append({"role": "user", "content": prompt})
         
-        if query:
-            full_query = st.session_state.mode_cmd + query
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        with st.chat_message("assistant"):
+            # Запрос к ИИ
+            chat = client.chat.completions.create(
+                messages=[{"role": "system", "content": "Ты эксперт по резюме. Делай структурированные ответы. Если просят презентацию - пиши по пунктам."}] + st.session_state.messages,
+                model="llama-3.3-70b-versatile"
+            )
+            response = chat.choices.message.content
+            st.markdown(response)
             
-            with st.spinner(f"{ai_name} обрабатывает запрос..."):
-                prompt = f"Ты — ИИ-учитель {ai_name}. Твой уровень: {level}. Выполни запрос: {full_query}"
-                
-                chat = client.chat.completions.create(
-                    messages=[{"role": "system", "content": prompt}, {"role": "user", "content": full_query}],
-                    model="llama-3.3-70b-versatile"
-                )
-                res = chat.choices[0].message.content
-                
-                with st.chat_message("assistant"):
-                    st.write(res)
-                
-                # Обнуляем режим после ответа
-                st.session_state.mode_cmd = ""
-                
-                if voice_on:
-                    clean_res = res.replace("'", "").replace('"', '').replace("\n", " ")
-                    st.components.v1.html(f"<script>var m=new SpeechSynthesisUtterance('{clean_res}');m.lang='ru-RU';window.speechSynthesis.speak(m);</script>", height=0)
-    except Exception as e:
-        st.error(f"Ошибка: {e}")
+            # --- ГЕНЕРАЦИЯ ФОТО ---
+            if gen_image:
+                st.subheader("🖼️ Визуализация:")
+                img_url = f"https://pollinations.ai{prompt.replace(' ','-')}?width=1024&height=512&nologo=true"
+                st.image(img_url)
+
+            # --- ИМИТАЦИЯ ВИДЕО ---
+            # На бесплатном уровне видео делать сложно, но мы можем дать ссылку на генератор
+            st.info("🎥 Для создания видео из этого текста используй бесплатный сервис: [Luma Dream Machine](https://lumalabs.ai)")
+
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            
+            if voice_on:
+                st.components.v1.html(f"<script>window.speechSynthesis.speak(new SpeechSynthesisUtterance('{response[:500].replace(chr(10), ' ')}'));</script>", height=0)
+
 else:
-    st.info(f"👋 Чтобы начать, вставь свой ключ в меню слева.")
+    st.info("🔑 Вставь ключ API, чтобы активировать медиа-функции.")
