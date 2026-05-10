@@ -17,8 +17,6 @@ with st.sidebar:
     
     st.divider()
     voice_on = st.toggle("Включить голос", value=True)
-    if st.button("Сбросить к стилю Kimi"):
-        st.rerun() # Кнопка для возврата к дефолту
 
 # 3. Дизайн с АНИМИРОВАННЫМ ассистентом
 st.markdown(f"""
@@ -29,55 +27,31 @@ st.markdown(f"""
 
     /* --- АНИМАЦИЯ АССИСТЕНТА --- */
     @keyframes float {{
-        0% {{ transform: translateY(0px) rotate(0deg); }}
-        50% {{ transform: translateY(-10px) rotate(2deg); }}
-        100% {{ transform: translateY(0px) rotate(0deg); }}
+        0% {{ transform: translateY(0px); }}
+        50% {{ transform: translateY(-10px); }}
+        100% {{ transform: translateY(0px); }}
     }}
     
     @keyframes breathe {{
-        0% {{ box-shadow: 0 0 15px rgba(91, 153, 255, 0.4); transform: scale(1); }}
-        50% {{ box-shadow: 0 0 25px rgba(91, 153, 255, 0.7); transform: scale(1.05); }}
-        100% {{ box-shadow: 0 0 15px rgba(91, 153, 255, 0.4); transform: scale(1); }}
-    }}
-
-    .kimi-container {{
-        display: flex;
-        justify-content: flex-start;
-        padding-top: 20px;
-        margin-bottom: 30px;
+        0% {{ box-shadow: 0 0 15px rgba(91, 153, 255, 0.4); }}
+        50% {{ box-shadow: 0 0 30px rgba(91, 153, 255, 0.8); }}
+        100% {{ box-shadow: 0 0 15px rgba(91, 153, 255, 0.4); }}
     }}
 
     .kimi-avatar {{
-        width: 50px;
-        height: 50px;
+        width: 55px; height: 55px;
         background: radial-gradient(circle at 30% 30%, #5B99FF, #2E5BFF);
         border-radius: 50%;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: float 4s ease-in-out infinite; /* Качается вверх-вниз */
+        display: flex; align-items: center; justify-content: center;
+        animation: float 4s ease-in-out infinite, breathe 3s infinite;
+        margin-bottom: 25px;
     }}
 
-    .kimi-avatar::before {{
-        content: '';
-        position: absolute;
-        width: 100%; height: 100%;
-        border-radius: 50%;
-        animation: breathe 3s infinite; /* Эффект пульсации/дыхания */
-    }}
-
-    .kimi-eyes {{
-        color: white;
-        font-weight: bold;
-        font-size: 22px;
-        letter-spacing: 2px;
-        z-index: 2;
-        user-select: none;
-    }}
+    .kimi-eyes {{ color: white; font-weight: bold; font-size: 24px; letter-spacing: 2px; user-select: none; }}
 
     /* --- ОСТАЛЬНОЙ ДИЗАЙН --- */
     [data-testid="stChatMessage"] {{ background-color: transparent !important; color: {text_color} !important; }}
+    
     .suggestion-chip {{
         background-color: {accent_color};
         border: 1px solid {text_color}22;
@@ -87,9 +61,7 @@ st.markdown(f"""
         font-size: 14px;
         color: {text_color}bb;
         display: inline-block;
-        transition: 0.3s;
     }}
-    .suggestion-chip:hover {{ border-color: #5B99FF; color: white; }}
 
     .stChatInputContainer input {{
         background-color: {accent_color} !important;
@@ -101,38 +73,34 @@ st.markdown(f"""
     header, footer {{visibility: hidden;}}
     </style>
 
-    <div class="kimi-container">
-        <div class="kimi-avatar">
-            <div class="kimi-eyes">••</div>
-        </div>
+    <div class="kimi-avatar">
+        <div class="kimi-eyes">••</div>
     </div>
     """, unsafe_allow_html=True)
 
 # 4. Интерфейс
 st.markdown(f"### Привет! Я твой живой ИИ-репетитор. \nНа какую тему создадим сегодня конспект?")
 
-st.markdown(f"""
-    <div class="suggestion-chip">Как устроена нейросеть?</div>
-    <div class="suggestion-chip">Объясни квантовую физику</div>
-    <div class="suggestion-chip">Напиши план тренировок</div>
-""", unsafe_allow_html=True)
-
+# 5. Логика работы
 if api_key:
     try:
         client = Groq(api_key=api_key)
-        query = st.chat_input("Напиши мне что-нибудь...")
+        query = st.chat_input("Спроси меня о чем угодно...")
 
         if query:
             with st.spinner(""):
+                # ИСПРАВЛЕННЫЙ ЗАПРОС К ИИ
                 chat = client.chat.completions.create(
                     messages=[{"role": "user", "content": query}],
                     model="llama-3.3-70b-versatile"
                 )
-                response = chat.choices.message.content
+                # ТУТ ДОБАВЛЕН ИНДЕКС [0]
+                response = chat.choices[0].message.content
                 
                 with st.chat_message("assistant"):
                     st.markdown(response)
                 
+                # Картинка
                 img_url = f"https://pollinations.ai{query.replace(' ','-')}?width=1024&height=576&nologo=true"
                 st.image(img_url)
 
@@ -142,12 +110,4 @@ if api_key:
     except Exception as e:
         st.error(f"Ошибка системы: {e}")
 else:
-    st.info("👋 Активируй меня ключом в меню слева!")
-
-# Декор (Pills)
-st.markdown(f"""
-<div style="margin-top: 30px;">
-    <span style="background:{accent_color}; padding:8px 16px; border-radius:20px; font-size:12px; border:1px solid {text_color}11; margin-right:10px;">🤖 Agent</span>
-    <span style="background:{accent_color}; padding:8px 16px; border-radius:20px; font-size:12px; border:1px solid {text_color}11;">📊 Slides</span>
-</div>
-""", unsafe_allow_html=True)
+    st.info("👋 Вставь свой ключ Groq в меню слева!")
